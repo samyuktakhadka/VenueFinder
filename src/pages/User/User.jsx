@@ -1,0 +1,367 @@
+
+import React, { useEffect, useState } from "react";
+import Layout from "../../components/Layout";
+import { MdDeleteOutline } from "react-icons/md";
+import { CiSearch } from "react-icons/ci";
+import {
+  Card,
+  Typography,
+} from "@material-tailwind/react";
+import { Link, useNavigate } from "react-router-dom";
+import Loader from "../../common/Loader";
+import demoimg from "../../images/dummy-image.jpg";
+import axios from "axios";
+import { getToken, logout } from "../../utils/jwtUtils";
+import toast from "react-hot-toast";
+const User = () => {
+  const TABLE_HEAD = [
+    {
+      head: "SN",
+    },
+    {
+      head: "Profile",
+    },
+    {
+      head: "Name",
+    },
+    {
+      head: "Email",
+    },
+    {
+      head: "Address",
+    },
+    {
+      head: "Contact",
+    },
+    {
+      head: "Action",
+    },
+  ];
+
+  const TABLE_ROWS = [
+    {
+      sn: 1,
+      userName: "John Doe",
+      contactNumber: "123-456-7890",
+      dateOfBirth: "1990-01-15",
+      address: "123 Main St, Springfield",
+      action: "Edit",
+    },
+    {
+      sn: 2,
+      userName: "Jane Smith",
+      contactNumber: "098-765-4321",
+      dateOfBirth: "1985-06-10",
+      address: "456 Oak Ave, Metropolis",
+      action: "View",
+    },
+    {
+      sn: 3,
+      userName: "Alex Johnson",
+      contactNumber: "456-789-1234",
+      dateOfBirth: "1992-03-22",
+      address: "789 Pine Rd, Gotham",
+      action: "Manage",
+    },
+    {
+      sn: 4,
+      userName: "Emily Davis",
+      contactNumber: "321-654-9870",
+      dateOfBirth: "1988-09-12",
+      address: "101 Elm St, Star City",
+      action: "Delete",
+    },
+  ];
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [search, setSearch] = useState(null);
+  const [query, setQuery] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const apiKey = import.meta.env["VITE_APP_BASE_URL"];
+  const token = getToken();
+  const navigate = useNavigate();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    fetchUser();
+  }, []);
+
+  const fetchUser = async () => {
+    setLoading(true);
+    await axios
+      .get(`${apiKey}api/user?search=${query}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(function (response) {
+        console.log(response.data);
+        setUsers(response.data);
+        setLoading(false);
+      })
+      .catch(function (error) {
+        var errorMessage = error.response.data.error;
+        if (errorMessage == "jwt expired") {
+          logout(navigate)
+        }
+        toast.error(errorMessage);
+        setLoading(false);
+      });
+  }
+
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value;
+    setSearch(query); // Update the search state
+    setQuery(query); // Trigger the API call asynchronously
+  };
+
+  const handleSearch = () => {
+    fetchUser();
+  }
+
+  const handleDelete = async () => {
+    setLoading(true);
+    if (selectedUser == null) {
+      toast.error("Something went wrong");
+      return;
+    }
+    await axios
+      .delete(`${apiKey}api/user/${selectedUser.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(function (response) {
+        console.log(response);
+        setShowDeleteModal(false);
+        toast.success(response.data.message);
+        fetchUser();
+      })
+      .catch(function (error) {
+        console.log(error);
+        setTimeout(() => {
+          setLoading(false);
+          if (error.response) {
+            var errorMessage = error.response.data.error;
+            if (errorMessage == "jwt expired") {
+              logout(navigate)
+            }
+            setShowDeleteModal(false);
+            toast.error(errorMessage);
+          } else if (error.message) {
+            console.log("Error", error.message);
+            toast.error("Error", error.message);
+          } else {
+            toast.error(error);
+            console.log("Error", error);
+          }
+        }, 1000);
+      });
+  }
+
+  return (
+    <>
+
+      {showDeleteModal ? (<>
+        <div class="fixed inset-0 flex items-center justify-center z-50 backdrop-blur confirm-dialog ">
+          <div class="relative px-4 min-h-screen md:flex md:items-center md:justify-center">
+            <div class=" opacity-25 w-full h-full absolute z-10 inset-0"></div>
+            <div class="bg-white rounded-lg md:max-w-md md:mx-auto p-4 fixed inset-x-0 bottom-0 z-50 mb-4 mx-4 md:relative shadow-lg">
+              <div class="md:flex items-center">
+                <div class="rounded-full border border-gray-300 flex items-center justify-center w-16 h-16 flex-shrink-0 mx-auto">
+                  <i class="bx bx-error text-3xl">
+                    &#9888;
+                  </i>
+                </div>
+                <div class="mt-4 md:mt-0 md:ml-6 text-center md:text-left">
+                  <p class="font-bold">Warning!</p>
+                  <p class="text-sm text-gray-700 mt-1">You will lose all of your data by deleting this. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div class="text-center md:text-right mt-4 md:flex md:justify-end">
+                <button onClick={handleDelete} id="confirm-delete-btn" class="block w-full md:inline-block md:w-auto px-4 py-3 md:py-2 bg-red-200 text-red-700 rounded-lg font-semibold text-sm md:ml-2 md:order-2">
+                  Delete
+                </button>
+                <button onClick={() => { setShowDeleteModal(false) }} id="confirm-cancel-btn" class="block w-full md:inline-block md:w-auto px-4 py-3 md:py-2 bg-gray-200 rounded-lg font-semibold text-sm mt-4 md:mt-0 md:order-1">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>) : (<></>)}
+      <Layout activePage="User">
+        {loading ? (
+          <>
+            <Loader />
+          </>
+        ) : (
+          <>
+            <div className="">
+              <div>
+                <h2 className="text-sm inline-block border-b-2 border-gray-400">
+                  Users
+                </h2>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-5 justify-between items-center ">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div class="relative w-56">
+                    <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+                      <CiSearch className="text-gray-800" />
+                    </div>
+                    <input
+                      type="text"
+                      id="simple-search"
+                      class="bg-white border border-gray-300 placeholder:text-xs text-xs text-gray-900 rounded-3xl  block w-full ps-10 px-2.5 py-2  outline-none"
+                      placeholder="Search..."
+                      value={search}
+                      onChange={handleSearchChange}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <button onClick={handleSearch} className="bg-blue-600 text-sm text-white py-1.5 px-9 rounded-xl border border-blue-600 hover:bg-blue-700 duration-500 transition-all flex items-center gap-2">Search</button>
+                  </div>
+
+                </div>
+                {/* <div>
+                  <Link to="/user-management/create" className="bg-blue-600 text-sm text-white py-1.5 px-9 rounded-xl border border-blue-600 hover:bg-blue-700 duration-500 transition-all flex items-center gap-2">
+                    Create User <FaSquarePlus className="text-xl" />
+                  </Link>
+                </div> */}
+              </div>
+            </div>
+            <div className="mt-2">
+              <Card className="h-full w-full border rounded-none overflow-x-auto">
+                {/* <CardHeader
+                  floated={true}
+                  shadow={false}
+                  className="mb-2 rounded-none p-2"
+              >
+                  <div className="w-full md:w-96">
+                      <Input
+                          label="Search Invoice"
+                          icon={<MagnifyingGlassIcon className="h-5 w-5" />}
+                      />
+                  </div>
+              </CardHeader> */}
+                <table className="w-full min-w-max table-auto text-left">
+                  <thead>
+                    <tr>
+                      {TABLE_HEAD.map(({ head }) => (
+                        <th key={head} className="border-b border-gray-300 p-4">
+                          <div className="flex items-center gap-1">
+                            <Typography
+                              color="blue-gray"
+                              variant="small"
+                              className="!font-bold"
+                            >
+                              {head}
+                            </Typography>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.length > 0 ? (
+                      users.map((element, index) => {
+                        const isLast = index === users.length - 1;
+                        const classes = isLast
+                          ? "p-3"
+                          : "p-3 border-b border-gray-300";
+                        return (
+
+                          <tr key={index}>
+                            <td className={classes}>
+                              <div className="flex items-center ml-2 gap-1">
+                                <Typography
+                                  variant="small"
+                                  color="blue-gray"
+                                  className="font-bold"
+                                >
+                                  {index + 1}
+                                </Typography>
+                              </div>
+                            </td>
+                            <td className={classes}>
+                              <div className="flex items-center ml-2 gap-1">
+                                <div className="h-10 w-10">
+                                  <img src={element.imageUrl ? apiKey + element.imageUrl : demoimg} className="w-full h-full object-cover object-center rounded-full" alt="" />
+                                </div>
+                              </div>
+                            </td>
+                            <td className={classes}>
+                              <Typography
+                                variant="small"
+                                className="font-normal text-gray-600 dark:text-white"
+                              >
+                                {element.name}
+                              </Typography>
+                            </td>
+                            <td className={classes}>
+                              <Typography
+                                variant="small"
+                                className="font-normal text-gray-600 dark:text-white"
+                              >
+                                {element.email}
+                              </Typography>
+                            </td>
+                            <td className={classes}>
+                              <Typography
+                                variant="small"
+                                className="font-normal text-gray-600 dark:text-white"
+                              >
+                                {element.address}
+                              </Typography>
+                            </td>
+                            <td className={classes}>
+                              <Typography
+                                variant="small"
+                                className="font-normal text-gray-600 dark:text-white"
+                              >
+                                {element.contact}
+                              </Typography>
+                            </td>
+                            <td className={classes}>
+                              <div className="flex items-center gap-2">
+                                {/* <Link to={`/admin/vendors/${element.id}`}>
+                                  <CiEdit className="text-2xl cursor-pointer text-blue-600 hover:text-blue-800 dark:hover:text-blue-400 dark:text-blue-200" />
+                                </Link> */}
+                                <button onClick={() => { setShowDeleteModal(true); setSelectedUser(element) }}>
+                                  <MdDeleteOutline className="text-2xl cursor-pointer hover:text-red-800 text-red-600 dark:hover:text-red-400 dark:text-red-200" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      }
+                      )) : (
+                      <tr>
+                        <td colSpan="3" className="text-center py-4">
+                          No data available
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </Card>
+            </div>
+            {/* <div className="mt-4">
+              <Pagination
+                totalRecords={200}
+                currentPage={1}
+                pageSize={5}
+                totalPages={10}
+              />
+            </div> */}
+          </>
+        )}
+      </Layout>
+    </>
+  );
+};
+
+export default User;
