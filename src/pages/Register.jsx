@@ -37,12 +37,26 @@ const Register = () => {
         email.trim() === "" ||
         password.trim() === "" ||
         contact.trim() === "" ||
-        // Convert priceRange to string
         address.trim() === ""
     ) {
         toast.error("Please fill all fields!");
         return false;
     }
+
+    // Validate phone number format (10 digits, Nepali number)
+    const phoneRegex = /^9[6-8][0-9]{8}$/;
+    if (!phoneRegex.test(contact.trim())) {
+        toast.error("Enter a valid phone number");
+        return false;
+    }
+
+    // Validate email format and common spelling errors
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail|yahoo|hotmail|outlook)\.(com|net|org)$/i;
+    if (!emailRegex.test(email.trim())) {
+        toast.error("Enter a valid Email address");
+        return false;
+    }
+
     return true;
 };
 
